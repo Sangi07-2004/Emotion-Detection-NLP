@@ -16,9 +16,11 @@ In this project, I built a **six-class emotion classification system** that take
 
 The project follows an end-to-end Machine Learning workflow:
 
-**Text → Preprocessing → TF-IDF → Model Training → Model Comparison → Best Model → Prediction**
+**Text → Preprocessing → TF-IDF → Multiple Model Training → Model Evaluation → Model Comparison → Hyperparameter Tuning → Best Model Selection → Prediction**
 
-After training and evaluating multiple Machine Learning classification models, **Random Forest achieved the highest test accuracy of 88.44%** among the evaluated models. Therefore, Random Forest was selected as the final model and integrated into a Streamlit application.
+Instead of directly selecting a single Machine Learning algorithm, I **trained and evaluated multiple classification models** on the same dataset and compared their performance using evaluation metrics such as **Accuracy, Precision, Recall, and F1-Score**.
+
+After comparing the different models, the best-performing model was selected for the final application. **Tuned Linear SVC achieved the highest test accuracy of 90.63%**, so it was selected as the final model and integrated into a Streamlit application.
 
 ---
 
@@ -53,7 +55,7 @@ The dataset is provided in a `.txt` format and contains text samples along with 
 | 😨 Fear | fear |
 | 😊 Joy | joy |
 
-> **Dataset Source:** Kaggle
+> **Dataset Source:** *Kaggle*
 
 ---
 
@@ -75,21 +77,29 @@ The dataset is provided in a `.txt` format and contains text samples along with 
           Feature Representation
                    │
                    ▼
-        Multiple ML Classification
-               Models
+       Multiple ML Classification
+                 Models
                    │
                    ▼
-          Model Performance
-             Comparison
+          Model Evaluation
                    │
                    ▼
-        Random Forest Classifier
+         Model Comparison
                    │
                    ▼
-          Save Trained Model
+      Hyperparameter Tuning
                    │
                    ▼
-          Streamlit Application
+        Best Model Selection
+                   │
+                   ▼
+        Tuned Linear SVC
+                   │
+                   ▼
+         Save Trained Model
+                   │
+                   ▼
+        Streamlit Application
                    │
                    ▼
           Emotion Prediction
