@@ -14,47 +14,79 @@ st.set_page_config(
 
 
 # =========================================================
-# LOAD MODEL AND VECTORIZER
+# LOAD MODEL, VECTORIZER AND EMOTION MAPPING
 # =========================================================
 
 @st.cache_resource
 def load_model():
 
-    model = joblib.load("random_forest_model.pkl")
+    model = joblib.load("linear_svc_model.pkl")
     vectorizer = joblib.load("tfidf_vectorizer.pkl")
+    emotion_numbers = joblib.load("emotion_mapping.pkl")
 
-    return model, vectorizer
+    reverse_emotion = {
+        value: key
+        for key, value in emotion_numbers.items()
+    }
+
+    return model, vectorizer, reverse_emotion
 
 
-model, vectorizer = load_model()
+try:
+
+    model, vectorizer, reverse_emotion = load_model()
+
+except Exception as e:
+
+    st.error("❌ Model files could not be loaded.")
+
+    st.write("Make sure these files are in the same folder as app.py:")
+
+    st.code("""
+linear_svc_model.pkl
+tfidf_vectorizer.pkl
+emotion_mapping.pkl
+""")
+
+    st.stop()
 
 
 # =========================================================
-# EMOTION MAPPING
+# EMOTION INFORMATION
 # =========================================================
 
-# If LabelEncoder was used during training,
-# sklearn assigns classes alphabetically:
+emotion_emojis = {
 
-emotion_names = {
-    0: "Sadness 😢",
-    1: "Anger 😡",
-    2: "Love ❤️",
-    3: "Surprise 😮",
-    4: "Fear 😨",
-    5: "Joy 😊"
+    "sadness": "😢",
+    "anger": "😡",
+    "love": "❤️",
+    "surprise": "😮",
+    "fear": "😨",
+    "joy": "😊"
+
 }
 
 
-# Description of emotions
-
 emotion_description = {
-    0: "Frustration, irritation or strong disagreement",
-    1: "Fear, anxiety, nervousness or feeling threatened",
-    2: "Happiness, excitement or positive feelings",
-    3: "Affection, care, romance or emotional connection",
-    4: "Sadness, loneliness, disappointment or feeling low",
-    5: "Unexpectedness, shock, curiosity or astonishment"
+
+    "sadness":
+        "Sadness, loneliness, disappointment or feeling low",
+
+    "anger":
+        "Frustration, irritation or strong disagreement",
+
+    "love":
+        "Affection, care, romance or emotional connection",
+
+    "surprise":
+        "Unexpectedness, shock, curiosity or astonishment",
+
+    "fear":
+        "Fear, anxiety, nervousness or feeling threatened",
+
+    "joy":
+        "Happiness, excitement or positive feelings"
+
 }
 
 
@@ -69,7 +101,7 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ Model")
 
 st.sidebar.write(
-    "**Algorithm:** Random Forest Classifier"
+    "**Algorithm:** Linear Support Vector Classifier"
 )
 
 st.sidebar.write(
@@ -81,19 +113,19 @@ st.sidebar.write(
 )
 
 st.sidebar.write(
-    "**Test Accuracy:** 88.44%"
+    "**Test Accuracy:** 90.63%"
 )
 
 st.sidebar.markdown("---")
 
 st.sidebar.subheader("🎯 Emotions")
 
-st.sidebar.write("0 → 😢 Sadness")
-st.sidebar.write("1 → 😡 Anger")
-st.sidebar.write("2 → ❤️ Love")
-st.sidebar.write("3 → 😮 Surprise")
-st.sidebar.write("4 → 😨 Fear")
-st.sidebar.write("5 → 😊 Joy")
+st.sidebar.write("😡 Anger")
+st.sidebar.write("😨 Fear")
+st.sidebar.write("😊 Joy")
+st.sidebar.write("❤️ Love")
+st.sidebar.write("😢 Sadness")
+st.sidebar.write("😮 Surprise")
 
 
 # =========================================================
@@ -114,7 +146,10 @@ st.markdown(
 
 text = st.text_area(
     "Enter your text:",
-    placeholder="Example: i feel deeply loved and cared for by the people around me",
+    placeholder=(
+        "Example: I feel deeply loved and cared for "
+        "by the people around me"
+    ),
     height=200
 )
 
@@ -125,7 +160,10 @@ text = st.text_area(
 
 if st.button("🚀 Analyze Emotion"):
 
-    # Check empty input
+    # -----------------------------------------------------
+    # CHECK EMPTY INPUT
+    # -----------------------------------------------------
+
     if not text.strip():
 
         st.warning("⚠️ Please enter some text first.")
@@ -133,75 +171,67 @@ if st.button("🚀 Analyze Emotion"):
     else:
 
         # -------------------------------------------------
-        # STEP 1: Convert text into TF-IDF
+        # STEP 1: TF-IDF
         # -------------------------------------------------
 
         text_tfidf = vectorizer.transform([text])
 
 
         # -------------------------------------------------
-        # STEP 2: Prediction
+        # STEP 2: PREDICTION
         # -------------------------------------------------
 
         prediction = model.predict(text_tfidf)[0]
 
 
         # -------------------------------------------------
-        # STEP 3: Probability
+        # STEP 3: CONVERT NUMBER TO EMOTION
         # -------------------------------------------------
 
-        probabilities = model.predict_proba(text_tfidf)[0]
-
-        confidence = max(probabilities)
-
-
-        # -------------------------------------------------
-        # DEBUG INFORMATION
-        # -------------------------------------------------
-
-        # Uncomment these if you want to check the actual
-        # prediction and classes.
-
-        # st.write("Raw Prediction:", prediction)
-        # st.write("Model Classes:", model.classes_)
-
-
-        # -------------------------------------------------
-        # HANDLE DIFFERENT LABEL TYPES
-        # -------------------------------------------------
-
-        # If model returns numpy integer
         try:
+
             prediction_int = int(prediction)
 
-            predicted_emotion = emotion_names.get(
-                prediction_int,
-                f"Unknown (Class {prediction_int})"
-            )
-
-            description = emotion_description.get(
-                prediction_int,
-                "Emotion could not be identified."
-            )
+            predicted_emotion = reverse_emotion[
+                prediction_int
+            ].lower()
 
         except (ValueError, TypeError):
 
-            # If model directly returns string labels
-            string_mapping = {
-                "sadness": "Sadness 😢",
-                "anger": "Anger 😡",
-                "love": "Love ❤️",
-                "surprise": "Surprise 😮",
-                "fear": "Fear 😨",
-                "joy": "Joy 😊"
-            }
+            predicted_emotion = str(
+                prediction
+            ).lower()
 
-            predicted_emotion = string_mapping.get(
-                str(prediction).lower(),
-                str(prediction)
-            )
 
-            description = ""
+        # -------------------------------------------------
+        # EMOTION DETAILS
+        # -------------------------------------------------
+
+        emoji = emotion_emojis.get(
+            predicted_emotion,
+            "🙂"
+        )
+
+        description = emotion_description.get(
+            predicted_emotion,
+            "Emotion detected from your text."
+        )
+
+
+        # =================================================
+        # PROBABILITY
+        # =================================================
+
+        probabilities = None
+        confidence = None
+
+        if hasattr(model, "predict_proba"):
+
+            probabilities = model.predict_proba(
+                text_tfidf
+            )[0]
+
+            confidence = max(probabilities)
 
 
         # =================================================
@@ -212,74 +242,119 @@ if st.button("🚀 Analyze Emotion"):
 
         st.subheader("🔮 Predicted Emotion")
 
+
         st.success(
-            f"### {predicted_emotion}"
+            f"### {predicted_emotion.capitalize()} {emoji}"
         )
 
-        st.write(
-            f"**Confidence:** {confidence:.2%}"
-        )
 
-        if description:
+        # -------------------------------------------------
+        # CONFIDENCE
+        # -------------------------------------------------
 
-            st.info(description)
+        if confidence is not None:
+
+            st.write(
+                f"**Confidence:** {confidence:.2%}"
+            )
+
+        else:
+
+            st.write(
+                "**Confidence:** Not available"
+            )
+
+
+        # -------------------------------------------------
+        # DESCRIPTION
+        # -------------------------------------------------
+
+        st.info(description)
 
 
         # =================================================
         # EMOTION PROBABILITY
         # =================================================
 
-        st.subheader("📊 Emotion Probability")
+        if probabilities is not None:
+
+            st.subheader("📊 Emotion Probability")
 
 
-        # Mapping for display
-        display_names = {
-            0: "Sadness 😢",
-            1: "Anger 😡",
-            2: "Love ❤️",
-            3: "Surprise 😮",
-            4: "Fear 😨",
-            5: "Joy 😊"
-        }
+            # Keep display order consistent
+            display_order = [
+                "sadness",
+                "anger",
+                "love",
+                "surprise",
+                "fear",
+                "joy"
+            ]
 
 
-        # Display probabilities
-        for cls, probability in zip(
-            model.classes_,
-            probabilities
-        ):
+            probability_dict = {}
 
-            try:
 
-                cls_int = int(cls)
+            # Create emotion → probability mapping
+            for cls, probability in zip(
+                model.classes_,
+                probabilities
+            ):
 
-                emotion = display_names.get(
-                    cls_int,
-                    f"Unknown (Class {cls_int})"
+                try:
+
+                    cls_int = int(cls)
+
+                    emotion = reverse_emotion[
+                        cls_int
+                    ].lower()
+
+                except (ValueError, TypeError):
+
+                    emotion = str(
+                        cls
+                    ).lower()
+
+                probability_dict[
+                    emotion
+                ] = probability
+
+
+            # -------------------------------------------------
+            # DISPLAY ALL EMOTIONS
+            # -------------------------------------------------
+
+            for emotion in display_order:
+
+                probability = probability_dict.get(
+                    emotion,
+                    0
                 )
 
-            except (ValueError, TypeError):
-
-                string_mapping = {
-                    "anger": "Anger 😡",
-                    "fear": "Fear 😨",
-                    "joy": "Joy 😊",
-                    "love": "Love ❤️",
-                    "sadness": "Sadness 😢",
-                    "surprise": "Surprise 😮"
-                }
-
-                emotion = string_mapping.get(
-                    str(cls).lower(),
-                    str(cls)
+                emoji = emotion_emojis.get(
+                    emotion,
+                    "🙂"
                 )
 
 
-            st.write(
-                f"**{emotion}** — {probability:.2%}"
+                st.write(
+                    f"**{emotion.capitalize()} "
+                    f"{emoji}** — "
+                    f"{probability:.2%}"
+                )
+
+
+                st.progress(
+                    float(probability)
+                )
+
+
+        else:
+
+            st.info(
+                "Probability information is not available "
+                "for this model."
             )
-
-            st.progress(float(probability))
 
 
         # =================================================
@@ -289,7 +364,7 @@ if st.button("🚀 Analyze Emotion"):
         st.markdown("---")
 
         st.caption(
-            "Model: Random Forest Classifier | "
+            "Model: Linear Support Vector Classifier | "
             "Features: TF-IDF | "
-            "Test Accuracy: 88.44%"
+            "Test Accuracy: 90.63%"
         )
